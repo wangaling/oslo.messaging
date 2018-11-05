@@ -35,6 +35,9 @@ from oslo_config import cfg
 from oslo_service import service
 from oslo_utils import eventletutils
 from oslo_utils import timeutils
+from oslo.config import cfg
+import oslo_messaging
+import time
 import six
 from stevedore import driver
 
@@ -57,7 +60,32 @@ _pool_opts = [
                ' executor is threading or eventlet.'),
 ]
 
+class ServerControlEndpoint(object):
+	target = messaging.target(namespace='control',version='2.0')
+	
+	def __init__(self,server):
+		self.server = server
+	def stop(self,ctx):
+		if server.server:
+			self.server.stop()
 
+class TestEndpoint(object):
+	def test(self,ctx,arg):
+		return arg
+transport = oslo_messaging.get_transport(cfg.CONF)
+target = oslo_messaging.Target(Topic = 'test',server = 'server1') 
+endpoints=[
+	ServerControlEndpoint(None),
+	TestEndpoint(),	
+]
+server = oslo_messaging.get_rpc_server(transport,target,endpoints,executor='blocking')
+try:
+	server.start()
+	while True:
+		time.sleep(1)
+except KeyboardInterrupt:
+	print("Stopping server")
+server.wait()     
 class MessagingServerError(exceptions.MessagingException):
     """Base class for all MessageHandlingServer exceptions."""
 
